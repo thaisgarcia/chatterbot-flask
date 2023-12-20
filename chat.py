@@ -1,18 +1,12 @@
 from flask import Flask, render_template, request, jsonify
 from chatterbot import ChatBot
 from chatterbot.trainers import ListTrainer
-from flask_mysqldb import MySQL
 import re
 import logging
 from datetime import datetime
+import mysql.connector
 
 app = Flask(__name__)
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = ''
-app.config['MYSQL_DB'] = 'barbearia'
-mysql = MySQL(app)
-
 app.logger.addHandler(logging.StreamHandler())
 app.logger.setLevel(logging.INFO)
 
@@ -36,21 +30,28 @@ conversa = [
 trainer = ListTrainer(chatbot)
 trainer.train(conversa)
 
+config = {
+    'user': 'root',
+    'password': '',
+    'host': 'localhost',
+    'database': 'barbearia',
+}
+
 @app.route("/")
 def home():
     return render_template("index.html")
 
 # Funções CRUD
-def agendar(nome_cliente, data_formatada, hora_formatada):
+def agendar(nome_cliente, data, hora):
     try:
-        # Converter data e hora
         data_formatada = datetime.strptime(data, "%Y-%m-%d").date()
         hora_formatada = datetime.strptime(hora, "%H:%M:%S").time()
 
-        conn = mysql.connect # Obter a conexão com o banco de dados
+        # Obter a conexão com o banco de dados usando mysql-connector-python
+        conn = mysql.connector.connect(**config)
         cur = conn.cursor()
         cur.execute("INSERT INTO agendamentos (nome_cliente, data, hora) VALUES (%s, %s, %s)",
-                    [nome_cliente, data_formatada, hora_formatada])
+                    (nome_cliente, data_formatada, hora_formatada))
         conn.commit()
         return "Agendamento realizado com sucesso!"
     except Exception as e:
